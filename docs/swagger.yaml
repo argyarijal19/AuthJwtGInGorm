@@ -1,0 +1,135 @@
+definitions:
+  models.ListDataUser:
+    properties:
+      code:
+        type: integer
+      data:
+        items:
+          $ref: '#/definitions/models.UserSimgoa'
+        type: array
+      status:
+        type: string
+      success:
+        type: boolean
+    type: object
+  models.LoginUser:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+  models.NewAccessToken:
+    properties:
+      accsessToken:
+        type: string
+    type: object
+  models.UserSimgoa:
+    properties:
+      description:
+        type: string
+      password:
+        type: string
+      plasma:
+        type: string
+      username:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: API Untuk belajar membuat endpoint dan membuat authetication menggunaka
+    Jason Web Token
+  title: Restful-API-Learn
+  version: "2.0"
+paths:
+  /auth:
+    post:
+      consumes:
+      - application/json
+      description: Login User.
+      parameters:
+      - description: Payload Body [RAW]
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.LoginUser'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.LoginUser'
+      summary: Login User.
+      tags:
+      - Authentication
+  /auth/refreshtoken:
+    get:
+      consumes:
+      - application/json
+      description: Refresh the access token using refresh token.
+      parameters:
+      - description: Refresh Token
+        in: header
+        name: Refresh-Token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.NewAccessToken'
+      security:
+      - ApiKeyAuth: []
+      summary: Refresh Access Token.
+      tags:
+      - Authentication
+  /user:
+    get:
+      consumes:
+      - application/json
+      description: get data User.
+      parameters:
+      - description: Bearer Token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ListDataUser'
+      security:
+      - ApiKeyAuth: []
+      summary: melihat data User.
+      tags:
+      - User Detail
+  /user/create_user:
+    post:
+      consumes:
+      - application/json
+      description: create data User.
+      parameters:
+      - description: Payload Body [RAW]
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.UserSimgoa'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ListDataUser'
+      summary: create data User.
+      tags:
+      - User Detail
+swagger: "2.0"
