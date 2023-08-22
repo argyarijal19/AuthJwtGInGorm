@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"belajar-restapi/api/middleware"
-	"belajar-restapi/helper"
 	"belajar-restapi/models"
 	"net/http"
 
@@ -22,56 +21,31 @@ import (
 func (db *UserHandler) LoginUSer(c *gin.Context) {
 	dataLogin := new(models.LoginUser)
 	if err := c.ShouldBindJSON(&dataLogin); err != nil {
-		c.JSON(http.StatusBadRequest, helper.ReturnData{
-			Code:    400,
-			Success: false,
-			Status:  "Gagal Login",
-			Data:    err.Error(),
-		})
+		middleware.ErrorResponse(c, http.StatusBadRequest, "Gagal Login", err.Error())
 		return
 	}
 	user, err := db.User.GetUserByUsername(dataLogin.Username)
 
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, helper.ReturnData{
-			Code:    401,
-			Success: false,
-			Status:  "Invalid Username",
-			Data:    nil,
-		})
+		middleware.ErrorResponse(c, http.StatusUnauthorized, "Invalid Username", err.Error())
 		return
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(dataLogin.Password)); err != nil {
-		c.JSON(http.StatusUnauthorized, helper.ReturnData{
-			Code:    401,
-			Success: false,
-			Status:  "Invalid Password",
-			Data:    nil,
-		})
+		middleware.ErrorResponse(c, http.StatusUnauthorized, "Invalid Password", err.Error())
 		return
 	}
 
 	accessToken, err := middleware.GenerateAccessToken(user)
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, helper.ReturnData{
-			Code:    500,
-			Success: false,
-			Status:  "Internal Server Error",
-			Data:    err.Error(),
-		})
+		middleware.ErrorResponse(c, http.StatusInternalServerError, "Internal Server Error", err.Error())
 		return
 	}
 
 	refreshToken, err := middleware.GenerateRefreshToken(user)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, helper.ReturnData{
-			Code:    500,
-			Success: false,
-			Status:  "Internal Server Error",
-			Data:    err.Error(),
-		})
+		middleware.ErrorResponse(c, http.StatusInternalServerError, "Internal Server Error", err.Error())
 		return
 	}
 
@@ -80,12 +54,7 @@ func (db *UserHandler) LoginUSer(c *gin.Context) {
 		"refresh_token": refreshToken,
 	}
 
-	c.JSON(200, helper.ReturnData{
-		Code:    200,
-		Success: true,
-		Status:  "Berhasil Login",
-		Data:    tokenGabung,
-	})
+	middleware.SuccessResponse(c, http.StatusOK, "success", tokenGabung)
 }
 
 // RefreshToken godoc
@@ -103,16 +72,9 @@ func (db *UserHandler) RefreshToken(c *gin.Context) {
 	newTokenString, err := middleware.GenerateAccessToken(user.(*models.UserSimgoa))
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, helper.ReturnData{
-			Code:    500,
-			Success: false,
-			Status:  "Internal Server Error",
-			Data:    nil,
-		})
+		middleware.ErrorResponse(c, http.StatusInternalServerError, "Internal Server Error", err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"access_token": newTokenString,
-	})
+	middleware.SuccessResponse(c, http.StatusOK, "success", gin.H{"access_token": newTokenString})
 }

@@ -1,9 +1,10 @@
 package handlers
 
 import (
-	"belajar-restapi/helper"
+	"belajar-restapi/api/middleware"
 	"belajar-restapi/models"
 	"belajar-restapi/repository/user"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
@@ -26,19 +27,10 @@ func (db *UserHandler) ShowDataUSer(c *gin.Context) {
 	usr := new([]models.UserSimgoa)
 	db.User.GetAllUser(usr)
 	if len(*usr) == 0 {
-		c.JSON(404, helper.ReturnData{
-			Code:    404,
-			Success: false,
-			Status:  "Data Not Found!!",
-			Data:    nil,
-		})
+		middleware.ErrorResponse(c, http.StatusNotFound, "Data Not Found", "")
+		return
 	}
-	c.JSON(200, helper.ReturnData{
-		Code:    200,
-		Success: true,
-		Status:  "Berhasil Get Data",
-		Data:    usr,
-	})
+	middleware.SuccessResponse(c, http.StatusOK, "success", usr)
 }
 
 // ShowDataUSer godoc
@@ -55,31 +47,16 @@ func (db *UserHandler) CreateUserNew(c *gin.Context) {
 
 	err := c.ShouldBindJSON(&dataUser)
 	if err != nil {
-		c.JSON(400, helper.ReturnData{
-			Code:    400,
-			Success: false,
-			Status:  "Bad Request",
-			Data:    err.Error(),
-		})
+		middleware.ErrorResponse(c, http.StatusBadRequest, "Register Failed", err.Error())
 		return
 	}
 
 	err = db.User.CreateUser(dataUser)
 	if err != nil {
-		c.JSON(500, helper.ReturnData{
-			Code:    500,
-			Success: false,
-			Status:  "Internal Server Error",
-			Data:    err.Error(),
-		})
+		middleware.ErrorResponse(c, http.StatusInternalServerError, "Internal Server Error", err.Error())
 		return
 	}
 
-	c.JSON(200, helper.ReturnData{
-		Code:    200,
-		Success: true,
-		Status:  "Berhasil post user",
-		Data:    dataUser,
-	})
+	middleware.SuccessResponse(c, http.StatusOK, "Register Success", "success")
 
 }
