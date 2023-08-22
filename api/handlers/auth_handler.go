@@ -1,12 +1,11 @@
 package handlers
 
 import (
+	"belajar-restapi/api/middleware"
 	"belajar-restapi/helper"
 	"belajar-restapi/models"
 	"net/http"
-	"time"
 
-	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -53,42 +52,32 @@ func (db *UserHandler) LoginUSer(c *gin.Context) {
 		return
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"username": user.Username,
-		"plasma":   user.Plasma,
-		"exp":      time.Now().Add(time.Minute * 2).Unix(),
-	})
+	accessToken, err := middleware.GenerateAccessToken(user)
 
-	tokenString, err := token.SignedString([]byte("secret_key"))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, helper.ReturnData{
 			Code:    500,
 			Success: false,
 			Status:  "Internal Server Error",
-			Data:    nil,
+			Data:    err.Error(),
 		})
 		return
 	}
 
-	refreshTOkenString, err := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"username": user.Username,
-		"plasma":   user.Plasma,
-		"exp":      time.Now().Add(time.Hour * 24 * 7).Unix(),
-	}).SignedString([]byte("refresh_secret_key"))
-
+	refreshToken, err := middleware.GenerateRefreshToken(user)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, helper.ReturnData{
 			Code:    500,
 			Success: false,
 			Status:  "Internal Server Error",
-			Data:    nil,
+			Data:    err.Error(),
 		})
 		return
 	}
 
 	tokenGabung := map[string]interface{}{
-		"access_token":  tokenString,
-		"refresh_token": refreshTOkenString,
+		"access_token":  accessToken,
+		"refresh_token": refreshToken,
 	}
 
 	c.JSON(200, helper.ReturnData{
@@ -110,43 +99,9 @@ func (db *UserHandler) LoginUSer(c *gin.Context) {
 // @Success 200 {object} models.NewAccessToken
 // @Router /auth/refreshtoken [get]
 func (db *UserHandler) RefreshToken(c *gin.Context) {
-	refreshTokenString := c.GetHeader("Refresh-Token")
-	if refreshTokenString == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"message": "Refresh token is missing"})
-		return
-	}
+	user, _ := c.Get("user")
+	newTokenString, err := middleware.GenerateAccessToken(user.(*models.UserSimgoa))
 
-	refreshtoken, err := jwt.Parse(refreshTokenString, func(t *jwt.Token) (interface{}, error) {
-		return []byte("refresh_secret_key"), nil
-	})
-
-	if err != nil || !refreshtoken.Valid {
-		c.JSON(http.StatusUnauthorized, gin.H{"message": "Invalid refresh token"})
-		return
-	}
-
-	claims, ok := refreshtoken.Claims.(jwt.MapClaims)
-
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to parse claims from refresh token"})
-		return
-	}
-
-	exparationTime := time.Unix(int64(claims["exp"].(float64)), 0)
-
-	if time.Now().After(exparationTime) {
-		c.JSON(http.StatusUnauthorized, gin.H{"message": "Token has expired"})
-		c.Abort()
-		return
-	}
-
-	newTokenString := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"username": claims["username"],
-		"plasma":   claims["plasma"],
-		"exp":      time.Now().Add(time.Minute * 2).Unix(),
-	})
-
-	tokenStringNew, err := newTokenString.SignedString([]byte("secret_key"))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, helper.ReturnData{
 			Code:    500,
@@ -158,6 +113,6 @@ func (db *UserHandler) RefreshToken(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"access_token": tokenStringNew,
+		"access_token": newTokenString,
 	})
 }

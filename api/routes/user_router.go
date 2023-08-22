@@ -23,5 +23,5 @@ func SetupUserRoutes(router *gin.Engine) {
 
 	auth := router.Group("/auth")
 	auth.POST("/", users.LoginUSer)
-	auth.GET("/refreshtoken", users.RefreshToken)
+	auth.GET("/refreshtoken", middleware.RefreshTokenMiddleware(), users.RefreshToken)
 }

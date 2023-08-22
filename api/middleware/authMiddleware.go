@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"belajar-restapi/models"
 	"net/http"
 	"time"
 
@@ -40,5 +41,53 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 		ctx.Next()
+	}
+}
+
+func RefreshTokenMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		refreshTokenString := c.GetHeader("Refresh-Token")
+		if refreshTokenString == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"message": "Refresh token is missing"})
+			c.Abort()
+			return
+		}
+
+		refreshtoken, err := jwt.Parse(refreshTokenString, func(t *jwt.Token) (interface{}, error) {
+			return []byte("refresh_secret_key"), nil
+		})
+
+		if err != nil || !refreshtoken.Valid {
+			c.JSON(http.StatusUnauthorized, gin.H{"message": "Invalid refresh token"})
+			c.Abort()
+			return
+		}
+
+		claims, ok := refreshtoken.Claims.(jwt.MapClaims)
+
+		if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to parse claims from refresh token"})
+			c.Abort()
+			return
+		}
+
+		expirationTime := time.Unix(int64(claims["exp"].(float64)), 0)
+
+		if time.Now().After(expirationTime) {
+			c.JSON(http.StatusUnauthorized, gin.H{"message": "Token has expired"})
+			c.Abort()
+			return
+		}
+		version := claims["version"].(float64) + 1
+		user := &models.UserSimgoa{
+			Username:    claims["username"].(string),
+			Plasma:      claims["plasma"].(string),
+			Description: claims["description"].(string),
+			Password:    claims["password"].(string),
+		}
+
+		c.Set("user", user)
+		c.Set("version", version) // Set the user in context for downstream handlers
+		c.Next()
 	}
 }
